@@ -3,7 +3,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 
-void app_main(void)
+extern "C" void app_main(void)
 {
     ESP_LOGI("RESERVATORIO", "Sistema iniciado!");
 
@@ -12,4 +12,4 @@ void app_main(void)
         ESP_LOGI("RESERVATORIO", "Reservatorio inteligente em execucao");
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
-};
+}

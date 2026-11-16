@@ -41,7 +41,9 @@
                 "/home/enzoluz/.platformio/packages/framework-espidf/components/soc/esp32",
                 "/home/enzoluz/.platformio/packages/framework-espidf/components/soc/esp32/include",
                 "/home/enzoluz/.platformio/packages/framework-espidf/components/soc/esp32/register",
-                "/home/enzoluz/dev/reservatorio_agua/components/hal/include",
+                "/home/enzoluz/.platformio/packages/framework-espidf/components/hal/platform_port/include",
+                "/home/enzoluz/.platformio/packages/framework-espidf/components/hal/esp32/include",
+                "/home/enzoluz/.platformio/packages/framework-espidf/components/hal/include",
                 "/home/enzoluz/.platformio/packages/framework-espidf/components/esp_rom/include",
                 "/home/enzoluz/.platformio/packages/framework-espidf/components/esp_rom/esp32/include",
                 "/home/enzoluz/.platformio/packages/framework-espidf/components/esp_rom/esp32/include/esp32",
@@ -244,6 +246,7 @@
                 "/home/enzoluz/.platformio/packages/framework-espidf/components/rt/include",
                 "/home/enzoluz/.platformio/packages/framework-espidf/components/spiffs/include",
                 "/home/enzoluz/dev/reservatorio_agua/components/application/include",
+                "/home/enzoluz/dev/reservatorio_agua/components/hal_reservatorio/include",
                 "/home/enzoluz/dev/reservatorio_agua/components/tasks/include",
                 ""
             ],
@@ -283,7 +286,9 @@
                     "/home/enzoluz/.platformio/packages/framework-espidf/components/soc/esp32",
                     "/home/enzoluz/.platformio/packages/framework-espidf/components/soc/esp32/include",
                     "/home/enzoluz/.platformio/packages/framework-espidf/components/soc/esp32/register",
-                    "/home/enzoluz/dev/reservatorio_agua/components/hal/include",
+                    "/home/enzoluz/.platformio/packages/framework-espidf/components/hal/platform_port/include",
+                    "/home/enzoluz/.platformio/packages/framework-espidf/components/hal/esp32/include",
+                    "/home/enzoluz/.platformio/packages/framework-espidf/components/hal/include",
                     "/home/enzoluz/.platformio/packages/framework-espidf/components/esp_rom/include",
                     "/home/enzoluz/.platformio/packages/framework-espidf/components/esp_rom/esp32/include",
                     "/home/enzoluz/.platformio/packages/framework-espidf/components/esp_rom/esp32/include/esp32",
@@ -486,6 +491,7 @@
                     "/home/enzoluz/.platformio/packages/framework-espidf/components/rt/include",
                     "/home/enzoluz/.platformio/packages/framework-espidf/components/spiffs/include",
                     "/home/enzoluz/dev/reservatorio_agua/components/application/include",
+                    "/home/enzoluz/dev/reservatorio_agua/components/hal_reservatorio/include",
                     "/home/enzoluz/dev/reservatorio_agua/components/tasks/include",
                     ""
                 ]
