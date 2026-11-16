@@ -1,3 +1,11 @@
 idf_component_register(
-    INCLUDE_DIRS "include"
+    SRCS
+        "task_sensores.cpp"
+        "task_controle.cpp"
+    INCLUDE_DIRS
+        "include"
+    REQUIRES
+        hal_reservatorio
+        application
+        freertos
 )

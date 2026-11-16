@@ -1,15 +1,49 @@
+
 {
   "version": 1,
-  "author": "Enzo Luz",
+  "author": "reservatorio",
   "editor": "wokwi",
   "parts": [
-    {
-      "type": "board-esp32-devkit-c-v4",
-      "id": "esp",
-      "top": 0,
-      "left": 0,
-      "attrs": {}
-    }
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-led", "id": "ledV", "top": -110, "left": 200, "attrs": { "color": "green" } },
+    { "type": "wokwi-led", "id": "ledR", "top": -110, "left": 260, "attrs": { "color": "red" } },
+    { "type": "wokwi-led", "id": "ledB", "top": -110, "left": 320, "attrs": { "color": "blue" } },
+    { "type": "wokwi-resistor", "id": "rV", "top": -60, "left": 190, "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "rR", "top": -40, "left": 250, "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "rB", "top": -20, "left": 310, "attrs": { "value": "220" } },
+    { "type": "wokwi-buzzer", "id": "bz1", "top": -110, "left": 390, "attrs": { "volume": "0.1" } },
+    { "type": "wokwi-hc-sr04", "id": "ultrassom", "top": 150, "left": 250, "attrs": { "distance": "100" } },
+    { "type": "wokwi-pushbutton", "id": "btnLiga", "top": 250, "left": 50, "attrs": { "color": "green", "label": "LIGAR" } },
+    { "type": "wokwi-pushbutton", "id": "btnDesliga", "top": 250, "left": 150, "attrs": { "color": "red", "label": "DESLIGAR" } },
+    { "type": "wokwi-pushbutton", "id": "btnReset", "top": 250, "left": 250, "attrs": { "color": "blue", "label": "RESET" } },
+    { "type": "wokwi-pushbutton", "id": "btnMenu", "top": 250, "left": 350, "attrs": { "color": "yellow", "label": "MENU" } }
   ],
-  "connections": []
+  "connections": [
+    [ "esp:26", "rV:1", "green", [ "v0" ] ],
+    [ "rV:2", "ledV:A", "green", [ "v0" ] ],
+    [ "ledV:C", "esp:GND.1", "black", [ "v0" ] ],
+    [ "esp:27", "rR:1", "red", [ "v0" ] ],
+    [ "rR:2", "ledR:A", "red", [ "v0" ] ],
+    [ "ledR:C", "esp:GND.1", "black", [ "v0" ] ],
+    [ "esp:19", "rB:1", "blue", [ "v0" ] ],
+    [ "rB:2", "ledB:A", "blue", [ "v0" ] ],
+    [ "ledB:C", "esp:GND.1", "black", [ "v0" ] ],
+    [ "esp:25", "bz1:2", "orange", [ "v0" ] ],
+    [ "bz1:1", "esp:GND.1", "black", [ "v0" ] ],
+    [ "esp:5", "ultrassom:TRIG", "green", [ "v0" ] ],
+    [ "esp:18", "ultrassom:ECHO", "blue", [ "v0" ] ],
+    [ "esp:5V", "ultrassom:VCC", "red", [ "v0" ] ],
+    [ "esp:GND.1", "ultrassom:GND", "black", [ "v0" ] ],
+    [ "esp:32", "btnLiga:1.l", "green", [] ],
+    [ "btnLiga:2.l", "esp:GND.1", "black", [] ],
+
+    [ "esp:33", "btnDesliga:1.l", "red", [] ],
+    [ "btnDesliga:2.l", "esp:GND.1", "black", [] ],
+
+    [ "esp:21", "btnReset:1.l", "blue", [] ],
+    [ "btnReset:2.l", "esp:GND.1", "black", [] ],
+
+    [ "esp:22", "btnMenu:1.l", "yellow", [] ],
+    [ "btnMenu:2.l", "esp:GND.1", "black", [] ]
+  ]
 }
