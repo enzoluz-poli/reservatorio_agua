@@ -1,18 +1,26 @@
+
 #pragma once
 
-class DriverIndicador {
+class DriverIndicador
+{
 public:
     void inicializar();
-    void acionarVerde();        // acende o verde e apaga o vermelho
-    void acionarVermelho();     // acende o vermelho e apaga o verde
+
+    void acionarVerde();
+    void acionarVermelho();
+    void acionarAzul();
+
+    void desligarAzul();
+
     void acionarBuzzer();
     void desligarBuzzer();
-    void desligarIndicadores(); // apaga LEDs e buzzer
+    void desligarIndicadores();
 
 private:
-    void aplicar();             // escreve os estados nos pinos
+    void aplicar();
 
     bool estadoVerde = false;
     bool estadoVermelho = false;
+    bool estadoAzul = false;
     bool estadoBuzzer = false;
 };
