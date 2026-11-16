@@ -1,15 +1,23 @@
 {
   "version": 1,
-  "author": "Enzo Luz",
+  "author": "reservatorio",
   "editor": "wokwi",
   "parts": [
-    {
-      "type": "board-esp32-devkit-c-v4",
-      "id": "esp",
-      "top": 0,
-      "left": 0,
-      "attrs": {}
-    }
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-led", "id": "ledV", "top": -110, "left": 200, "attrs": { "color": "green" } },
+    { "type": "wokwi-led", "id": "ledR", "top": -110, "left": 260, "attrs": { "color": "red" } },
+    { "type": "wokwi-resistor", "id": "rV", "top": -60, "left": 190, "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "rR", "top": -40, "left": 250, "attrs": { "value": "220" } },
+    { "type": "wokwi-buzzer", "id": "bz1", "top": -110, "left": 330, "attrs": { "volume": "0.1" } }
   ],
-  "connections": []
+  "connections": [
+    [ "esp:26", "rV:1", "green", [ "v0" ] ],
+    [ "rV:2", "ledV:A", "green", [ "v0" ] ],
+    [ "ledV:C", "esp:GND.1", "black", [ "v0" ] ],
+    [ "esp:27", "rR:1", "red", [ "v0" ] ],
+    [ "rR:2", "ledR:A", "red", [ "v0" ] ],
+    [ "ledR:C", "esp:GND.1", "black", [ "v0" ] ],
+    [ "esp:25", "bz1:2", "orange", [ "v0" ] ],
+    [ "bz1:1", "esp:GND.1", "black", [ "v0" ] ]
+  ]
 }
