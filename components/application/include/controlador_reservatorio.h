@@ -67,10 +67,11 @@ private:
     // Converte distancia medida em nivel percentual
     float calcularNivelPercentual(float distanciaCm) const;
 
-    float setpoint = 0.0f;
-    float tolerancia = 0.0f;
+    float setpoint = 70.0f;
+    float tolerancia = 5.0f;
 
     uint8_t contadorLeiturasInvalidas = 0;
+    bool bombaLigada = false;
 
     EstadoReservatorio estadoAtual =
         EstadoReservatorio::INICIALIZANDO;

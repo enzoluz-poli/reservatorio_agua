@@ -10,6 +10,8 @@
 
 #include "driver_botoes.h"
 
+#include "driver_atuacao.h"
+
 static const char *TAG = "TASK_CONTROLE";
 
 void taskControle(void *pvParameters)
@@ -18,6 +20,10 @@ void taskControle(void *pvParameters)
 
     DriverIndicador indicador;
     indicador.inicializar();
+
+    DriverAtuacao atuacao;
+    atuacao.inicializar();
+    atuacao.desligar();
 
     DriverBotoes botoes;
     botoes.inicializar();
@@ -49,6 +55,11 @@ void taskControle(void *pvParameters)
         // Le os botoes a cada iteracao (50 ms).
         EstadoBotoes estadoBotoes = botoes.lerBotoes();
 
+        if (estadoBotoes.ligar)
+        {
+            ESP_LOGI(TAG, "BOTAO LIGAR DETECTADO");
+        }
+
         if (estadoBotoes.reset && !resetPendente)
         {
             resetPendente = true;
@@ -59,6 +70,8 @@ void taskControle(void *pvParameters)
         entrada.distanciaCm = dados.distanciaCm;
         entrada.leituraUltrassomValida = dados.valida;
         entrada.novaLeituraUltrassom = novaLeitura;
+        entrada.fluxoLmin = dados.fluxoLmin;
+        entrada.leituraFluxoValida = dados.fluxoValido;
 
         entrada.botaoLiga = estadoBotoes.ligar;
         entrada.botaoDesliga = estadoBotoes.desligar;
@@ -67,6 +80,7 @@ void taskControle(void *pvParameters)
 
         // Atualiza a Application.
         ComandosSaida saida = controlador.atualizar(entrada);
+        atuacao.definirPotencia(saida.potenciaBomba);
 
         if (novaLeitura && resetPendente)
         {
@@ -74,6 +88,9 @@ void taskControle(void *pvParameters)
         }
 
         // Aplica os comandos dos indicadores.
+        // Aplica os comandos dos indicadores.
+        indicador.desligarIndicadores();
+
         if (saida.ledVerde)
             indicador.acionarVerde();
 
@@ -82,13 +99,9 @@ void taskControle(void *pvParameters)
 
         if (saida.ledAzul)
             indicador.acionarAzul();
-        else
-            indicador.desligarAzul();
 
         if (saida.buzzer)
             indicador.acionarBuzzer();
-        else
-            indicador.desligarBuzzer();
 
         // Registra os dados somente quando chega uma nova medicao.
         if (novaLeitura)

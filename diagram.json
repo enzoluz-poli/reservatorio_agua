@@ -12,7 +12,10 @@
     { "type": "wokwi-resistor", "id": "rR", "top": -40, "left": 250, "attrs": { "value": "220" } },
     { "type": "wokwi-resistor", "id": "rB", "top": -20, "left": 310, "attrs": { "value": "220" } },
     { "type": "wokwi-buzzer", "id": "bz1", "top": -110, "left": 390, "attrs": { "volume": "0.1" } },
-    { "type": "wokwi-hc-sr04", "id": "ultrassom", "top": 150, "left": 250, "attrs": { "distance": "100" } },
+    { "type": "wokwi-hc-sr04", "id": "ultrassom", "top": 150, "left": 250, "attrs": { "distance": "20" } },
+    { "type": "chip-pulse", "id": "fluxo", "top": 400, "left": 450, "attrs": { "frequency": "7.5" } },
+    { "type": "wokwi-led", "id": "ledPWM", "top": 150, "left": 450, "attrs": { "color": "yellow" } },
+{ "type": "wokwi-resistor", "id": "rPWM", "top": 110, "left": 440, "attrs": { "value": "220" } },
     { "type": "wokwi-pushbutton", "id": "btnLiga", "top": 250, "left": 50, "attrs": { "color": "green", "label": "LIGAR" } },
     { "type": "wokwi-pushbutton", "id": "btnDesliga", "top": 250, "left": 150, "attrs": { "color": "red", "label": "DESLIGAR" } },
     { "type": "wokwi-pushbutton", "id": "btnReset", "top": 250, "left": 250, "attrs": { "color": "blue", "label": "RESET" } },
@@ -44,6 +47,12 @@
     [ "btnReset:2.l", "esp:GND.1", "black", [] ],
 
     [ "esp:22", "btnMenu:1.l", "yellow", [] ],
-    [ "btnMenu:2.l", "esp:GND.1", "black", [] ]
+    [ "btnMenu:2.l", "esp:GND.1", "black", [] ],
+    [ "esp:23", "rPWM:1", "yellow", [ "v0" ] ],
+    [ "rPWM:2", "ledPWM:A", "yellow", [ "v0" ] ],
+    [ "ledPWM:C", "esp:GND.1", "black", [ "v0" ] ],
+    [ "esp:5V", "fluxo:VCC", "red", [] ],
+    [ "esp:GND.1", "fluxo:GND", "black", [] ],
+    [ "fluxo:PULSE", "esp:34", "purple", [] ]
   ]
 }

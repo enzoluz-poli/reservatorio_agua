@@ -8,4 +8,6 @@ idf_component_register(
         hal_reservatorio
         application
         freertos
+        esp_timer
 )
+

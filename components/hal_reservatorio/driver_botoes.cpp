@@ -4,6 +4,8 @@
 #include "driver/gpio.h"
 #include "esp_timer.h"
 
+#include "esp_log.h"
+
 #define PINO_BOTAO_LIGAR GPIO_NUM_32
 #define PINO_BOTAO_DESLIGAR GPIO_NUM_33
 #define PINO_BOTAO_RESET GPIO_NUM_21
@@ -32,6 +34,11 @@ void DriverBotoes::inicializar()
         gpio_config(&config);
 
         bool leituraInicial = (gpio_get_level(pinos[i]) == 0);
+
+        if (i == 0)
+        {
+            ESP_LOGI("TESTE_BOTAO", "GPIO 32 nivel: %d", gpio_get_level(pinos[i]));
+        }
 
         ultimaLeitura[i] = leituraInicial;
         estadoEstavel[i] = leituraInicial;
