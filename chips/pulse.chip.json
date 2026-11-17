@@ -1,0 +1,23 @@
+{
+  "name": "Pulse Generator",
+  "author": "MicroBeaut",
+  "pins": [
+    "GND",
+    "VCC",
+    "",
+    "",
+    "",
+    "PULSE",
+    "PUMP"
+  ],
+  "controls": [
+    {
+      "id": "frequency",
+      "label": "Frequency",
+      "type": "range",
+      "min": 0,
+      "max": 512,
+      "step": 0.5
+    }
+  ]
+}
