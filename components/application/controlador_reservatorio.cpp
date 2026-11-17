@@ -10,6 +10,9 @@ void ControladorReservatorio::inicializar()
     bombaLigada = false;
     contadorLeiturasInvalidas = 0;
 
+    contadorLeiturasSemFluxo = 0;
+    tempoBombaLigada = 0.0f;
+
     // Inicializacao concluida: aguarda o comando do usuario
     estadoAtual = EstadoReservatorio::AGUARDANDO;
 }
@@ -33,6 +36,7 @@ float ControladorReservatorio::calcularNivelPercentual(float distanciaCm) const
 ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
 {
     ComandosSaida saida{};
+    bool bombaEstavaLigada = bombaLigada;
 
     saida.potenciaBomba = bombaLigada ? 100 : 0;
 
@@ -57,6 +61,8 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
         {
             estadoAtual = EstadoReservatorio::RECUPERACAO;
             contadorLeiturasInvalidas = 0;
+            contadorLeiturasSemFluxo = 0;
+            tempoBombaLigada = 0.0f;
 
             saida.estado = EstadoReservatorio::RECUPERACAO;
             saida.ledAzul = true;
@@ -101,6 +107,8 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
     {
         estadoAtual = EstadoReservatorio::AGUARDANDO;
         bombaLigada = false;
+        contadorLeiturasSemFluxo = 0;
+        tempoBombaLigada = 0.0f;
     }
 
     saida.estado = estadoAtual;
@@ -153,6 +161,12 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
         }
     }
 
+    if (!bombaEstavaLigada && bombaLigada)
+    {
+        tempoBombaLigada = 0.0f;
+        contadorLeiturasSemFluxo = 0;
+    }
+
     saida.potenciaBomba = bombaLigada ? 100 : 0;
 
     // Sem nova medicao, nao atualiza o contador de falhas
@@ -161,6 +175,48 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
         saida.estado = estadoAtual;
         saida.nivelPercentual = nivel;
         return saida;
+    }
+
+    if (bombaLigada)
+    {
+        tempoBombaLigada += entrada.dt;
+    }
+    else
+    {
+        tempoBombaLigada = 0.0f;
+        contadorLeiturasSemFluxo = 0;
+    }
+
+    if (bombaLigada &&
+        tempoBombaLigada >= tempoPartidaBomba)
+    {
+        if (entrada.leituraFluxoValida)
+        {
+            if (entrada.fluxoLmin < 0.3f)
+            {
+                if (contadorLeiturasSemFluxo < 3)
+                {
+                    contadorLeiturasSemFluxo++;
+                }
+            }
+            else
+            {
+                contadorLeiturasSemFluxo = 0;
+            }
+        }
+
+        if (contadorLeiturasSemFluxo >= 3)
+        {
+            estadoAtual = EstadoReservatorio::FALHA;
+            bombaLigada = false;
+            saida.potenciaBomba = 0;
+            saida.estado = EstadoReservatorio::FALHA;
+            saida.nivelPercentual = nivel;
+            saida.ledVermelho = true;
+            saida.buzzer = true;
+
+            return saida;
+        }
     }
     // Verifica se a leitura e a distancia estao dentro da faixa valida
     if (nivel < 0.0f)

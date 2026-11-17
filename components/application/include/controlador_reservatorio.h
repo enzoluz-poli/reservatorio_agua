@@ -72,6 +72,9 @@ private:
 
     uint8_t contadorLeiturasInvalidas = 0;
     bool bombaLigada = false;
+    uint8_t contadorLeiturasSemFluxo = 0;
+    float tempoBombaLigada = 0.0f;
+    float tempoPartidaBomba = 2.0f;
 
     EstadoReservatorio estadoAtual =
         EstadoReservatorio::INICIALIZANDO;

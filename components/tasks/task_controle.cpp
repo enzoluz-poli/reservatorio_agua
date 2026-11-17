@@ -72,6 +72,7 @@ void taskControle(void *pvParameters)
         entrada.novaLeituraUltrassom = novaLeitura;
         entrada.fluxoLmin = dados.fluxoLmin;
         entrada.leituraFluxoValida = dados.fluxoValido;
+        entrada.dt = novaLeitura ? 1.0f : 0.0f;
 
         entrada.botaoLiga = estadoBotoes.ligar;
         entrada.botaoDesliga = estadoBotoes.desligar;

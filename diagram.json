@@ -53,6 +53,7 @@
     [ "ledPWM:C", "esp:GND.1", "black", [ "v0" ] ],
     [ "esp:5V", "fluxo:VCC", "red", [] ],
     [ "esp:GND.1", "fluxo:GND", "black", [] ],
-    [ "fluxo:PULSE", "esp:34", "purple", [] ]
+    [ "fluxo:PULSE", "esp:34", "purple", [] ],
+    [ "esp:4", "fluxo:PUMP", "orange", [] ]
   ]
 }
