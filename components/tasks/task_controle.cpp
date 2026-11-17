@@ -1,4 +1,3 @@
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -16,7 +15,9 @@
 #include <stdio.h>
 
 static const char *TAG = "TASK_CONTROLE";
+
 static const float PASSO_SETPOINT = 5.0f;
+static const uint8_t NUM_TELAS = 3;
 
 static const char *nomeEstado(EstadoReservatorio estado)
 {
@@ -93,14 +94,14 @@ void taskControle(void *pvParameters)
 
         bool mudouTela = false;
 
-        // Alterna a tela somente no momento do pressionamento.
+        // Menu: alterna a tela somente no momento do pressionamento.
         if (estadoBotoes.menu && !menuAnterior)
         {
-            telaAtual = (telaAtual + 1) % 2;
+            telaAtual = (telaAtual + 1) % NUM_TELAS;
             mudouTela = true;
         }
 
-        menuAnterior = estadoBotoes.menu;
+        // + e -: ajustam o setpoint e mostram a tela de setpoint.
         if (estadoBotoes.aumentar && !aumentarAnterior)
         {
             controlador.configurarSetpoint(
@@ -117,13 +118,9 @@ void taskControle(void *pvParameters)
             mudouTela = true;
         }
 
+        menuAnterior = estadoBotoes.menu;
         aumentarAnterior = estadoBotoes.aumentar;
         diminuirAnterior = estadoBotoes.diminuir;
-
-        if (estadoBotoes.ligar)
-        {
-            ESP_LOGI(TAG, "BOTAO LIGAR DETECTADO");
-        }
 
         if (estadoBotoes.reset && !resetPendente)
         {
@@ -143,13 +140,12 @@ void taskControle(void *pvParameters)
         entrada.botaoDesliga = estadoBotoes.desligar;
         entrada.botaoReset = resetPendente;
         entrada.botaoMenu = estadoBotoes.menu;
+        entrada.botaoAumentar = estadoBotoes.aumentar;
+        entrada.botaoDiminuir = estadoBotoes.diminuir;
 
         ComandosSaida saida = controlador.atualizar(entrada);
 
         atuacao.definirPotencia(saida.potenciaBomba);
-        ESP_LOGI(TAG, "Nivel: %.2f | Potencia enviada: %u%%",
-                 saida.nivelPercentual,
-                 saida.potenciaBomba);
 
         if (novaLeitura && resetPendente)
         {
@@ -174,9 +170,11 @@ void taskControle(void *pvParameters)
         {
             ESP_LOGI(
                 TAG,
-                "Nivel: %.2f%% | Estado: %d",
+                "Nivel: %.2f%% | Estado: %d | Potencia: %u%% | Setpoint: %.1f%%",
                 saida.nivelPercentual,
-                static_cast<int>(saida.estado));
+                static_cast<int>(saida.estado),
+                saida.potenciaBomba,
+                controlador.obterSetpoint());
         }
 
         // Atualiza o display quando chega uma leitura
@@ -210,7 +208,7 @@ void taskControle(void *pvParameters)
                     "Estado: %s",
                     nomeEstado(saida.estado));
             }
-            else
+            else if (telaAtual == 1)
             {
                 snprintf(
                     linha1,
@@ -223,6 +221,16 @@ void taskControle(void *pvParameters)
                     sizeof(linha2),
                     "Potencia: %u%%",
                     saida.potenciaBomba);
+            }
+            else
+            {
+                snprintf(
+                    linha1,
+                    sizeof(linha1),
+                    "Setpoint: %4.1f%%",
+                    controlador.obterSetpoint());
+
+                snprintf(linha2, sizeof(linha2), "+/- para mudar");
             }
 
             display.escrever(0, linha1);

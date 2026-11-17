@@ -277,7 +277,7 @@ void ControladorReservatorio::configurarSetpoint(float valor)
 
 void ControladorReservatorio::configurarTolerancia(float valor)
 {
-    if (valor < 0.0f || valor > 100.0f)
+    if (valor < 10.0f || valor > 95.0f)
         return;
 
     tolerancia = valor;
