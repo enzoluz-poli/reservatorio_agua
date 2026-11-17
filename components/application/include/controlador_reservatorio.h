@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-// Estados operacionais do reservatorio
 enum class EstadoReservatorio
 {
     INICIALIZANDO,
@@ -13,7 +12,6 @@ enum class EstadoReservatorio
     RECUPERACAO
 };
 
-// Informacoes recebidas pela Application
 struct DadosEntrada
 {
     float distanciaCm = 0.0f;
@@ -34,7 +32,6 @@ struct DadosEntrada
     bool botaoDiminuir = false;
 };
 
-// Comandos produzidos pela Application
 struct ComandosSaida
 {
     uint8_t potenciaBomba = 0;
@@ -48,7 +45,6 @@ struct ComandosSaida
     bool buzzer = false;
 };
 
-// Controlador principal do reservatorio
 class ControladorReservatorio
 {
 public:
@@ -57,21 +53,22 @@ public:
     ComandosSaida atualizar(const DadosEntrada &entrada);
 
     void configurarSetpoint(float valor);
+    float obterSetpoint() const { return setpoint; }
     void configurarTolerancia(float valor);
 
 private:
-    // Parametros de calibracao do sensor ultrassonico (cm)
     float distanciaNivelVazio = 40.0f;
     float distanciaNivelCheio = 5.0f;
 
-    // Converte distancia medida em nivel percentual
     float calcularNivelPercentual(float distanciaCm) const;
 
     float setpoint = 70.0f;
-    float tolerancia = 5.0f;
+    float tolerancia = 2.0f;
 
     uint8_t contadorLeiturasInvalidas = 0;
     bool bombaLigada = false;
+    uint8_t potenciaBombaAtual = 0;
+
     uint8_t contadorLeiturasSemFluxo = 0;
     float tempoBombaLigada = 0.0f;
     float tempoPartidaBomba = 2.0f;
