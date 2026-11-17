@@ -1,7 +1,9 @@
 #include "driver_atuacao.h"
 #include "driver/ledc.h"
+#include "driver/gpio.h"
 
 #define PINO_BOMBA 23
+#define PINO_STATUS_BOMBA GPIO_NUM_4
 #define PWM_MODO LEDC_HIGH_SPEED_MODE
 #define PWM_TIMER LEDC_TIMER_0
 #define PWM_CANAL LEDC_CHANNEL_0
@@ -10,6 +12,9 @@
 
 void DriverAtuacao::inicializar()
 {
+    gpio_reset_pin(PINO_STATUS_BOMBA);
+    gpio_set_direction(PINO_STATUS_BOMBA, GPIO_MODE_OUTPUT);
+    gpio_set_level(PINO_STATUS_BOMBA, 0);
     ledc_timer_config_t timer = {};
     timer.speed_mode = PWM_MODO;
     timer.duty_resolution = PWM_RESOLUCAO;
@@ -37,6 +42,7 @@ void DriverAtuacao::definirPotencia(uint8_t p)
         p = 100;
     }
     potenciaAtual = p;
+    gpio_set_level(PINO_STATUS_BOMBA, p > 0 ? 1 : 0);
 
     uint32_t duty = (uint32_t)p * DUTY_MAXIMO / 100;
     ledc_set_duty(PWM_MODO, PWM_CANAL, duty);

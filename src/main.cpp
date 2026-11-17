@@ -25,20 +25,40 @@ extern "C" void app_main(void)
     ESP_LOGI("RESERVATORIO", "Fila de sensores criada");
 
     // Inicia tarefa de sensores
-    xTaskCreate(
+    // Inicia tarefa de sensores
+    TaskHandle_t tarefaSensores = nullptr;
+
+    BaseType_t resultadoSensores = xTaskCreate(
         taskSensores,
         "TaskSensores",
         4096,
         (void *)filaSensores,
         5,
-        nullptr);
+        &tarefaSensores);
 
-    // Inicia tarefa de controle
-    xTaskCreate(
+    if (resultadoSensores != pdPASS)
+    {
+        ESP_LOGE("RESERVATORIO", "Erro ao criar tarefa de sensores");
+        return;
+    }
+
+    TaskHandle_t tarefaControle = nullptr;
+
+    BaseType_t resultadoControle = xTaskCreate(
         taskControle,
         "TaskControle",
         4096,
         (void *)filaSensores,
         5,
-        nullptr);
+        &tarefaControle);
+
+    if (resultadoControle != pdPASS)
+    {
+        ESP_LOGE("RESERVATORIO", "Erro ao criar tarefa de controle");
+
+        vTaskDelete(tarefaSensores);
+        return;
+    }
+
+    ESP_LOGI("RESERVATORIO", "Tarefas iniciadas com sucesso");
 }
