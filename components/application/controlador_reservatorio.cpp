@@ -56,7 +56,7 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
 
     bool leituraSegura = nivel >= 0.0f;
 
-    // Em falha, so sai com RESET e sensor de nivel funcionando.
+    // Em falha, so sai com RESET e uma nova leitura do sensor.
     if (estadoAtual == EstadoReservatorio::FALHA)
     {
         bombaLigada = false;
@@ -88,8 +88,8 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
         return saida;
     }
 
-    // Recuperacao: confere o sensor de nivel. Se a ultima falha foi de
-    // fluxo, permanece aqui ate o teste da bomba confirmar o fluxo.
+    // Recuperacao: confere o sensor de nivel.
+    // Se a ultima falha foi de fluxo, aguarda o teste da bomba.
     if (estadoAtual == EstadoReservatorio::RECUPERACAO &&
         entrada.novaLeituraUltrassom)
     {
@@ -128,7 +128,7 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
                 float erro = setpoint - nivel;
                 float potenciaCalculada = 0.0f;
 
-                // Zona morta: bomba desligada quando nivel >= setpoint - tolerancia
+                // Zona morta: bomba desligada quando nivel >= setpoint - tolerancia.
                 if (nivel < setpoint - tolerancia)
                 {
                     potenciaCalculada = GANHO_PROPORCIONAL * erro;
@@ -143,13 +143,13 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
             }
         }
 
-        // Entre medicoes, mantem a ultima potencia calculada
+        // Entre medicoes, mantem a ultima potencia calculada.
         saida.potenciaBomba = potenciaBombaAtual;
     }
     else if (estadoAtual == EstadoReservatorio::RECUPERACAO &&
              fluxoPendenteVerificacao)
     {
-        // Teste da bomba: liga com potencia fixa para verificar o fluxo
+        // Teste da bomba: liga com potencia fixa para verificar o fluxo.
         potenciaBombaAtual = POTENCIA_TESTE_BOMBA;
         saida.potenciaBomba = potenciaBombaAtual;
     }
@@ -171,11 +171,11 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
 
     saida.estado = estadoAtual;
 
-    // Subestado visivel da operacao normal (nao altera o controle da bomba)
+    // Subestado visivel da operacao normal.
+    // Nao altera o controle da bomba.
     if (estadoAtual == EstadoReservatorio::OPERACAO_NORMAL && leituraSegura)
     {
-        float limiteAbaixo =
-            std::min(0.9f * setpoint, setpoint - tolerancia);
+        float limiteAbaixo = setpoint - 10.0f;
 
         if (nivel < limiteAbaixo)
         {
@@ -255,7 +255,8 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
             }
         }
 
-        // Ausencia de fluxo: falha (so sai com RESET e novo teste)
+        // Ausencia de fluxo: falha.
+        // So sai com RESET e novo teste.
         if (contadorLeiturasSemFluxo >= 3)
         {
             estadoAtual = EstadoReservatorio::FALHA;
@@ -276,7 +277,7 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
             return saida;
         }
 
-        // Teste de recuperacao aprovado: fluxo confirmado
+        // Teste de recuperacao aprovado: fluxo confirmado.
         if (estadoAtual == EstadoReservatorio::RECUPERACAO &&
             fluxoPendenteVerificacao &&
             contadorLeiturasComFluxo >= LEITURAS_TESTE_OK)
