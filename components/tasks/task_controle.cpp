@@ -16,8 +16,8 @@
 
 static const char *TAG = "TASK_CONTROLE";
 
-static const float PASSO_SETPOINT = 5.0f;
-static const uint8_t NUM_TELAS = 3;
+static constexpr float PASSO_SETPOINT = 5.0f;
+static constexpr uint8_t NUM_TELAS = 3;
 
 static const char *nomeEstado(EstadoReservatorio estado)
 {
@@ -40,6 +40,39 @@ static const char *nomeEstado(EstadoReservatorio estado)
 
     default:
         return "DESCONHECIDO";
+    }
+}
+
+static const char *nomeSubestado(SubestadoOperacao subestado)
+{
+    switch (subestado)
+    {
+    case SubestadoOperacao::ABAIXO_SETPOINT:
+        return "Abaixo setpoint";
+
+    case SubestadoOperacao::PROXIMO_SETPOINT:
+        return "Proximo setpoint";
+
+    case SubestadoOperacao::ESTABILIZADO:
+        return "Estabilizado";
+
+    default:
+        return "Operando";
+    }
+}
+
+static const char *nomeCausa(CausaFalha causa)
+{
+    switch (causa)
+    {
+    case CausaFalha::SENSOR_NIVEL:
+        return "SENSOR";
+
+    case CausaFalha::SEM_FLUXO:
+        return "SEM FLUXO";
+
+    default:
+        return "DESCONHECIDA";
     }
 }
 
@@ -76,6 +109,10 @@ void taskControle(void *pvParameters)
     bool menuAnterior = false;
     bool aumentarAnterior = false;
     bool diminuirAnterior = false;
+
+    EstadoReservatorio estadoAnterior = EstadoReservatorio::AGUARDANDO;
+    SubestadoOperacao subestadoAnterior = SubestadoOperacao::NENHUM;
+
     uint8_t telaAtual = 0;
 
     while (1)
@@ -94,32 +131,41 @@ void taskControle(void *pvParameters)
 
         bool mudouTela = false;
 
-        // Menu: alterna a tela somente no momento do pressionamento.
+        // Navegacao entre as tres telas.
         if (estadoBotoes.menu && !menuAnterior)
         {
             telaAtual = (telaAtual + 1) % NUM_TELAS;
             mudouTela = true;
         }
 
-        // + e -: ajustam o setpoint e mostram a tela de setpoint.
+        menuAnterior = estadoBotoes.menu;
+
+        // Detecta o pressionamento do botao de aumentar.
         if (estadoBotoes.aumentar && !aumentarAnterior)
         {
-            controlador.configurarSetpoint(
-                controlador.obterSetpoint() + PASSO_SETPOINT);
+            float novoSetpoint =
+                controlador.obterSetpoint() + PASSO_SETPOINT;
+
+            controlador.configurarSetpoint(novoSetpoint);
+
             telaAtual = 2;
             mudouTela = true;
         }
 
+        aumentarAnterior = estadoBotoes.aumentar;
+
+        // Detecta o pressionamento do botao de diminuir.
         if (estadoBotoes.diminuir && !diminuirAnterior)
         {
-            controlador.configurarSetpoint(
-                controlador.obterSetpoint() - PASSO_SETPOINT);
+            float novoSetpoint =
+                controlador.obterSetpoint() - PASSO_SETPOINT;
+
+            controlador.configurarSetpoint(novoSetpoint);
+
             telaAtual = 2;
             mudouTela = true;
         }
 
-        menuAnterior = estadoBotoes.menu;
-        aumentarAnterior = estadoBotoes.aumentar;
         diminuirAnterior = estadoBotoes.diminuir;
 
         if (estadoBotoes.reset && !resetPendente)
@@ -134,18 +180,29 @@ void taskControle(void *pvParameters)
         entrada.novaLeituraUltrassom = novaLeitura;
         entrada.fluxoLmin = dados.fluxoLmin;
         entrada.leituraFluxoValida = dados.fluxoValido;
-        entrada.dt = novaLeitura ? 1.0f : 0.0f;
+        entrada.dt = novaLeitura ? dados.dt : 0.0f;
 
         entrada.botaoLiga = estadoBotoes.ligar;
         entrada.botaoDesliga = estadoBotoes.desligar;
         entrada.botaoReset = resetPendente;
-        entrada.botaoMenu = estadoBotoes.menu;
-        entrada.botaoAumentar = estadoBotoes.aumentar;
-        entrada.botaoDiminuir = estadoBotoes.diminuir;
 
         ComandosSaida saida = controlador.atualizar(entrada);
 
         atuacao.definirPotencia(saida.potenciaBomba);
+
+        // Ao entrar em falha, volta para a tela principal com a causa.
+        if (saida.estado == EstadoReservatorio::FALHA &&
+            estadoAnterior != EstadoReservatorio::FALHA)
+        {
+            telaAtual = 0;
+            mudouTela = true;
+        }
+
+        bool mudouEstado = (saida.estado != estadoAnterior) ||
+                           (saida.subestado != subestadoAnterior);
+
+        estadoAnterior = saida.estado;
+        subestadoAnterior = saida.subestado;
 
         if (novaLeitura && resetPendente)
         {
@@ -177,9 +234,9 @@ void taskControle(void *pvParameters)
                 controlador.obterSetpoint());
         }
 
-        // Atualiza o display quando chega uma leitura
-        // ou quando o usuario troca de tela.
-        if (novaLeitura || mudouTela)
+        // Atualiza o display em novas leituras, mudancas de tela
+        // ou mudancas de estado.
+        if (novaLeitura || mudouTela || mudouEstado)
         {
             char linha1[17];
             char linha2[17];
@@ -202,11 +259,30 @@ void taskControle(void *pvParameters)
                         "Nivel: INVALIDO");
                 }
 
-                snprintf(
-                    linha2,
-                    sizeof(linha2),
-                    "Estado: %s",
-                    nomeEstado(saida.estado));
+                if (saida.estado == EstadoReservatorio::FALHA)
+                {
+                    snprintf(
+                        linha2,
+                        sizeof(linha2),
+                        "FALHA: %s",
+                        nomeCausa(saida.causaFalha));
+                }
+                else if (saida.estado == EstadoReservatorio::OPERACAO_NORMAL)
+                {
+                    snprintf(
+                        linha2,
+                        sizeof(linha2),
+                        "%s",
+                        nomeSubestado(saida.subestado));
+                }
+                else
+                {
+                    snprintf(
+                        linha2,
+                        sizeof(linha2),
+                        "Estado: %s",
+                        nomeEstado(saida.estado));
+                }
             }
             else if (telaAtual == 1)
             {
@@ -227,10 +303,13 @@ void taskControle(void *pvParameters)
                 snprintf(
                     linha1,
                     sizeof(linha1),
-                    "Setpoint: %4.1f%%",
-                    controlador.obterSetpoint());
+                    "Ajuste Setpoint");
 
-                snprintf(linha2, sizeof(linha2), "+/- para mudar");
+                snprintf(
+                    linha2,
+                    sizeof(linha2),
+                    "Valor: %5.1f%%",
+                    controlador.obterSetpoint());
             }
 
             display.escrever(0, linha1);

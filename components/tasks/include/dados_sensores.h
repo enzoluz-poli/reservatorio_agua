@@ -9,4 +9,7 @@ struct DadosSensores
     // Sensor de fluxo
     float fluxoLmin = 0.0f;
     bool fluxoValido = false;
+
+    // Intervalo real entre aquisicoes, em segundos
+    float dt = 0.0f;
 };

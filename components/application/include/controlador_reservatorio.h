@@ -12,6 +12,21 @@ enum class EstadoReservatorio
     RECUPERACAO
 };
 
+enum class SubestadoOperacao
+{
+    NENHUM,
+    ABAIXO_SETPOINT,
+    PROXIMO_SETPOINT,
+    ESTABILIZADO
+};
+
+enum class CausaFalha
+{
+    NENHUMA,
+    SENSOR_NIVEL,
+    SEM_FLUXO
+};
+
 struct DadosEntrada
 {
     float distanciaCm = 0.0f;
@@ -26,10 +41,6 @@ struct DadosEntrada
     bool botaoLiga = false;
     bool botaoDesliga = false;
     bool botaoReset = false;
-
-    bool botaoMenu = false;
-    bool botaoAumentar = false;
-    bool botaoDiminuir = false;
 };
 
 struct ComandosSaida
@@ -38,6 +49,8 @@ struct ComandosSaida
     float nivelPercentual = -1.0f;
 
     EstadoReservatorio estado = EstadoReservatorio::INICIALIZANDO;
+    SubestadoOperacao subestado = SubestadoOperacao::NENHUM;
+    CausaFalha causaFalha = CausaFalha::NENHUMA;
 
     bool ledVerde = false;
     bool ledVermelho = false;
@@ -54,7 +67,6 @@ public:
 
     void configurarSetpoint(float valor);
     float obterSetpoint() const { return setpoint; }
-    void configurarTolerancia(float valor);
 
 private:
     float distanciaNivelVazio = 40.0f;
@@ -72,6 +84,11 @@ private:
     uint8_t contadorLeiturasSemFluxo = 0;
     float tempoBombaLigada = 0.0f;
     float tempoPartidaBomba = 2.0f;
+
+    bool fluxoPendenteVerificacao = false;
+    uint8_t contadorLeiturasComFluxo = 0;
+
+    CausaFalha causaFalha = CausaFalha::NENHUMA;
 
     EstadoReservatorio estadoAtual =
         EstadoReservatorio::INICIALIZANDO;

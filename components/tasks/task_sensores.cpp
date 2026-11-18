@@ -60,7 +60,7 @@ void taskSensores(void *pvParameters)
 
         dados.fluxoLmin = vazao;
         dados.fluxoValido = fluxoValido;
-
+        dados.dt = intervaloSegundos;
         if (distancia < 0.0f)
         {
             dados.distanciaCm = -1.0f;
