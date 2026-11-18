@@ -26,13 +26,15 @@ void DriverIndicador::acionarVerde()
 {
     estadoVerde = true;
     estadoVermelho = false;
+    estadoAzul = false;
     aplicar();
 }
 
 void DriverIndicador::acionarVermelho()
 {
-    estadoVermelho = true;
     estadoVerde = false;
+    estadoVermelho = true;
+    estadoAzul = false;
     aplicar();
 }
 
@@ -67,9 +69,9 @@ void DriverIndicador::aplicar()
 
 void DriverIndicador::acionarAzul()
 {
-    estadoAzul = true;
     estadoVerde = false;
     estadoVermelho = false;
+    estadoAzul = true;
     aplicar();
 }
 

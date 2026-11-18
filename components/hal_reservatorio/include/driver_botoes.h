@@ -1,7 +1,8 @@
-
 #pragma once
 
 #include <stdint.h>
+
+#define NUM_BOTOES 6
 
 struct EstadoBotoes
 {
@@ -9,6 +10,8 @@ struct EstadoBotoes
     bool desligar = false;
     bool reset = false;
     bool menu = false;
+    bool aumentar = false;
+    bool diminuir = false;
 };
 
 class DriverBotoes
@@ -18,7 +21,7 @@ public:
     EstadoBotoes lerBotoes();
 
 private:
-    bool estadoEstavel[4] = {};
-    bool ultimaLeitura[4] = {};
-    int64_t instanteMudanca[4] = {};
+    bool estadoEstavel[NUM_BOTOES] = {};
+    bool ultimaLeitura[NUM_BOTOES] = {};
+    int64_t instanteMudanca[NUM_BOTOES] = {};
 };
