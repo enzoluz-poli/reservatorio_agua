@@ -26,10 +26,6 @@ struct DadosEntrada
     bool botaoLiga = false;
     bool botaoDesliga = false;
     bool botaoReset = false;
-
-    bool botaoMenu = false;
-    bool botaoAumentar = false;
-    bool botaoDiminuir = false;
 };
 
 struct ComandosSaida
@@ -54,7 +50,6 @@ public:
 
     void configurarSetpoint(float valor);
     float obterSetpoint() const { return setpoint; }
-    void configurarTolerancia(float valor);
 
 private:
     float distanciaNivelVazio = 40.0f;
@@ -72,6 +67,9 @@ private:
     uint8_t contadorLeiturasSemFluxo = 0;
     float tempoBombaLigada = 0.0f;
     float tempoPartidaBomba = 2.0f;
+
+    bool fluxoPendenteVerificacao = false;
+    uint8_t contadorLeiturasComFluxo = 0;
 
     EstadoReservatorio estadoAtual =
         EstadoReservatorio::INICIALIZANDO;

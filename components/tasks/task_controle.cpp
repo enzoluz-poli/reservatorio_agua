@@ -1,3 +1,4 @@
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -16,8 +17,8 @@
 
 static const char *TAG = "TASK_CONTROLE";
 
-static const float PASSO_SETPOINT = 5.0f;
-static const uint8_t NUM_TELAS = 3;
+static constexpr float PASSO_SETPOINT = 5.0f;
+static constexpr uint8_t NUM_TELAS = 3;
 
 static const char *nomeEstado(EstadoReservatorio estado)
 {
@@ -76,6 +77,7 @@ void taskControle(void *pvParameters)
     bool menuAnterior = false;
     bool aumentarAnterior = false;
     bool diminuirAnterior = false;
+
     uint8_t telaAtual = 0;
 
     while (1)
@@ -94,33 +96,47 @@ void taskControle(void *pvParameters)
 
         bool mudouTela = false;
 
-        // Menu: alterna a tela somente no momento do pressionamento.
+        // Navegacao entre as tres telas.
         if (estadoBotoes.menu && !menuAnterior)
         {
             telaAtual = (telaAtual + 1) % NUM_TELAS;
             mudouTela = true;
         }
 
-        // + e -: ajustam o setpoint e mostram a tela de setpoint.
+        menuAnterior = estadoBotoes.menu;
+
+        // Detecta o pressionamento do botao de aumentar.
         if (estadoBotoes.aumentar && !aumentarAnterior)
         {
-            controlador.configurarSetpoint(
-                controlador.obterSetpoint() + PASSO_SETPOINT);
+            float novoSetpoint =
+                controlador.obterSetpoint() + PASSO_SETPOINT;
+
+            controlador.configurarSetpoint(novoSetpoint);
+
             telaAtual = 2;
             mudouTela = true;
         }
 
+        aumentarAnterior = estadoBotoes.aumentar;
+
+        // Detecta o pressionamento do botao de diminuir.
         if (estadoBotoes.diminuir && !diminuirAnterior)
         {
-            controlador.configurarSetpoint(
-                controlador.obterSetpoint() - PASSO_SETPOINT);
+            float novoSetpoint =
+                controlador.obterSetpoint() - PASSO_SETPOINT;
+
+            controlador.configurarSetpoint(novoSetpoint);
+
             telaAtual = 2;
             mudouTela = true;
         }
 
-        menuAnterior = estadoBotoes.menu;
-        aumentarAnterior = estadoBotoes.aumentar;
         diminuirAnterior = estadoBotoes.diminuir;
+
+        if (estadoBotoes.ligar)
+        {
+            ESP_LOGI(TAG, "BOTAO LIGAR DETECTADO");
+        }
 
         if (estadoBotoes.reset && !resetPendente)
         {
@@ -134,14 +150,11 @@ void taskControle(void *pvParameters)
         entrada.novaLeituraUltrassom = novaLeitura;
         entrada.fluxoLmin = dados.fluxoLmin;
         entrada.leituraFluxoValida = dados.fluxoValido;
-        entrada.dt = novaLeitura ? 1.0f : 0.0f;
+        entrada.dt = novaLeitura ? dados.dt : 0.0f;
 
         entrada.botaoLiga = estadoBotoes.ligar;
         entrada.botaoDesliga = estadoBotoes.desligar;
         entrada.botaoReset = resetPendente;
-        entrada.botaoMenu = estadoBotoes.menu;
-        entrada.botaoAumentar = estadoBotoes.aumentar;
-        entrada.botaoDiminuir = estadoBotoes.diminuir;
 
         ComandosSaida saida = controlador.atualizar(entrada);
 
@@ -177,8 +190,7 @@ void taskControle(void *pvParameters)
                 controlador.obterSetpoint());
         }
 
-        // Atualiza o display quando chega uma leitura
-        // ou quando o usuario troca de tela.
+        // Atualiza o display em novas leituras ou mudancas de tela.
         if (novaLeitura || mudouTela)
         {
             char linha1[17];
@@ -227,10 +239,13 @@ void taskControle(void *pvParameters)
                 snprintf(
                     linha1,
                     sizeof(linha1),
-                    "Setpoint: %4.1f%%",
-                    controlador.obterSetpoint());
+                    "Ajuste Setpoint");
 
-                snprintf(linha2, sizeof(linha2), "+/- para mudar");
+                snprintf(
+                    linha2,
+                    sizeof(linha2),
+                    "Valor: %5.1f%%",
+                    controlador.obterSetpoint());
             }
 
             display.escrever(0, linha1);

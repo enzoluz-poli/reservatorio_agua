@@ -1,9 +1,12 @@
-
 #include "controlador_reservatorio.h"
 
 #include <algorithm>
 
 static constexpr float GANHO_PROPORCIONAL = 5.0f;
+static constexpr float MARGEM_CM = 2.0f;
+static constexpr float LIMIAR_FLUXO_LMIN = 0.3f;
+static constexpr uint8_t POTENCIA_TESTE_BOMBA = 50;
+static constexpr uint8_t LEITURAS_TESTE_OK = 2;
 
 void ControladorReservatorio::inicializar()
 {
@@ -13,15 +16,16 @@ void ControladorReservatorio::inicializar()
     tolerancia = 2.0f;
 
     bombaLigada = false;
+    potenciaBombaAtual = 0;
     contadorLeiturasInvalidas = 0;
 
     contadorLeiturasSemFluxo = 0;
+    contadorLeiturasComFluxo = 0;
+    fluxoPendenteVerificacao = false;
     tempoBombaLigada = 0.0f;
 
     estadoAtual = EstadoReservatorio::AGUARDANDO;
 }
-
-static constexpr float MARGEM_CM = 2.0f;
 
 float ControladorReservatorio::calcularNivelPercentual(float distanciaCm) const
 {
@@ -52,10 +56,11 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
 
     bool leituraSegura = nivel >= 0.0f;
 
-    // Mantem o sistema em falha ate receber um comando de recuperacao.
+    // Em falha, so sai com RESET e sensor de nivel funcionando.
     if (estadoAtual == EstadoReservatorio::FALHA)
     {
         bombaLigada = false;
+        potenciaBombaAtual = 0;
         saida.potenciaBomba = 0;
 
         if (entrada.botaoReset &&
@@ -65,9 +70,11 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
             estadoAtual = EstadoReservatorio::RECUPERACAO;
             contadorLeiturasInvalidas = 0;
             contadorLeiturasSemFluxo = 0;
+            contadorLeiturasComFluxo = 0;
             tempoBombaLigada = 0.0f;
 
             saida.estado = EstadoReservatorio::RECUPERACAO;
+            saida.nivelPercentual = nivel;
             saida.ledAzul = true;
 
             return saida;
@@ -81,19 +88,18 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
         return saida;
     }
 
-    // Etapa de recuperacao.
+    // Recuperacao: confere o sensor de nivel. Se a ultima falha foi de
+    // fluxo, permanece aqui ate o teste da bomba confirmar o fluxo.
     if (estadoAtual == EstadoReservatorio::RECUPERACAO &&
         entrada.novaLeituraUltrassom)
     {
-        bombaLigada = false;
-
-        if (leituraSegura)
-        {
-            estadoAtual = EstadoReservatorio::AGUARDANDO;
-        }
-        else
+        if (!leituraSegura)
         {
             estadoAtual = EstadoReservatorio::FALHA;
+        }
+        else if (!fluxoPendenteVerificacao)
+        {
+            estadoAtual = EstadoReservatorio::AGUARDANDO;
         }
     }
 
@@ -112,9 +118,11 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
 
         bombaLigada = false;
         contadorLeiturasSemFluxo = 0;
+        contadorLeiturasComFluxo = 0;
         tempoBombaLigada = 0.0f;
     }
 
+    // Potencia da bomba conforme o estado.
     if (estadoAtual == EstadoReservatorio::OPERACAO_NORMAL)
     {
         if (entrada.novaLeituraUltrassom)
@@ -142,6 +150,13 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
         // Entre medicoes, mantem a ultima potencia calculada
         saida.potenciaBomba = potenciaBombaAtual;
     }
+    else if (estadoAtual == EstadoReservatorio::RECUPERACAO &&
+             fluxoPendenteVerificacao)
+    {
+        // Teste da bomba: liga com potencia fixa para verificar o fluxo
+        potenciaBombaAtual = POTENCIA_TESTE_BOMBA;
+        saida.potenciaBomba = potenciaBombaAtual;
+    }
     else
     {
         potenciaBombaAtual = 0;
@@ -155,6 +170,7 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
     {
         tempoBombaLigada = 0.0f;
         contadorLeiturasSemFluxo = 0;
+        contadorLeiturasComFluxo = 0;
     }
 
     saida.estado = estadoAtual;
@@ -194,16 +210,19 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
     {
         tempoBombaLigada = 0.0f;
         contadorLeiturasSemFluxo = 0;
+        contadorLeiturasComFluxo = 0;
     }
 
-    // Detecta ausencia de fluxo depois do tempo de partida.
+    // Verifica o fluxo depois do tempo de partida da bomba.
     if (bombaLigada &&
         tempoBombaLigada >= tempoPartidaBomba)
     {
         if (entrada.leituraFluxoValida)
         {
-            if (entrada.fluxoLmin < 0.3f)
+            if (entrada.fluxoLmin < LIMIAR_FLUXO_LMIN)
             {
+                contadorLeiturasComFluxo = 0;
+
                 if (contadorLeiturasSemFluxo < 3)
                 {
                     contadorLeiturasSemFluxo++;
@@ -212,13 +231,21 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
             else
             {
                 contadorLeiturasSemFluxo = 0;
+
+                if (contadorLeiturasComFluxo < 255)
+                {
+                    contadorLeiturasComFluxo++;
+                }
             }
         }
 
+        // Ausencia de fluxo: falha (so sai com RESET e novo teste)
         if (contadorLeiturasSemFluxo >= 3)
         {
             estadoAtual = EstadoReservatorio::FALHA;
+            fluxoPendenteVerificacao = true;
             bombaLigada = false;
+            potenciaBombaAtual = 0;
 
             saida.potenciaBomba = 0;
             saida.estado = EstadoReservatorio::FALHA;
@@ -227,6 +254,24 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
             saida.ledAzul = false;
             saida.ledVermelho = true;
             saida.buzzer = true;
+
+            return saida;
+        }
+
+        // Teste de recuperacao aprovado: fluxo confirmado
+        if (estadoAtual == EstadoReservatorio::RECUPERACAO &&
+            fluxoPendenteVerificacao &&
+            contadorLeiturasComFluxo >= LEITURAS_TESTE_OK)
+        {
+            fluxoPendenteVerificacao = false;
+            estadoAtual = EstadoReservatorio::AGUARDANDO;
+            bombaLigada = false;
+            potenciaBombaAtual = 0;
+
+            saida.potenciaBomba = 0;
+            saida.estado = EstadoReservatorio::AGUARDANDO;
+            saida.nivelPercentual = nivel;
+            saida.ledAzul = true;
 
             return saida;
         }
@@ -272,13 +317,6 @@ void ControladorReservatorio::configurarSetpoint(float valor)
 {
     if (valor < 10.0f || valor > 95.0f)
         return;
+
     setpoint = valor;
-}
-
-void ControladorReservatorio::configurarTolerancia(float valor)
-{
-    if (valor < 10.0f || valor > 95.0f)
-        return;
-
-    tolerancia = valor;
 }

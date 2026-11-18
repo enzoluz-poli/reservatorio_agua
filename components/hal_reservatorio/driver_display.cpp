@@ -139,8 +139,16 @@ void DriverDisplay::escrever(uint8_t linha, const char *texto)
 
     enviarByteLCD(endereco, false);
 
-    for (uint8_t i = 0; texto[i] != '\0' && i < 16; i++)
+    uint8_t i = 0;
+
+    for (; texto[i] != '\0' && i < 16; i++)
     {
         enviarByteLCD(texto[i], true);
+    }
+
+    // Completa a linha com espacos para apagar restos do texto anterior
+    for (; i < 16; i++)
+    {
+        enviarByteLCD(' ', true);
     }
 }
