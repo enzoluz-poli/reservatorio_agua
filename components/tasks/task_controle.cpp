@@ -1,4 +1,3 @@
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -44,6 +43,39 @@ static const char *nomeEstado(EstadoReservatorio estado)
     }
 }
 
+static const char *nomeSubestado(SubestadoOperacao subestado)
+{
+    switch (subestado)
+    {
+    case SubestadoOperacao::ABAIXO_SETPOINT:
+        return "Abaixo setpoint";
+
+    case SubestadoOperacao::PROXIMO_SETPOINT:
+        return "Proximo setpoint";
+
+    case SubestadoOperacao::ESTABILIZADO:
+        return "Estabilizado";
+
+    default:
+        return "Operando";
+    }
+}
+
+static const char *nomeCausa(CausaFalha causa)
+{
+    switch (causa)
+    {
+    case CausaFalha::SENSOR_NIVEL:
+        return "SENSOR";
+
+    case CausaFalha::SEM_FLUXO:
+        return "SEM FLUXO";
+
+    default:
+        return "DESCONHECIDA";
+    }
+}
+
 void taskControle(void *pvParameters)
 {
     QueueHandle_t filaSensores = (QueueHandle_t)pvParameters;
@@ -77,6 +109,9 @@ void taskControle(void *pvParameters)
     bool menuAnterior = false;
     bool aumentarAnterior = false;
     bool diminuirAnterior = false;
+
+    EstadoReservatorio estadoAnterior = EstadoReservatorio::AGUARDANDO;
+    SubestadoOperacao subestadoAnterior = SubestadoOperacao::NENHUM;
 
     uint8_t telaAtual = 0;
 
@@ -133,11 +168,6 @@ void taskControle(void *pvParameters)
 
         diminuirAnterior = estadoBotoes.diminuir;
 
-        if (estadoBotoes.ligar)
-        {
-            ESP_LOGI(TAG, "BOTAO LIGAR DETECTADO");
-        }
-
         if (estadoBotoes.reset && !resetPendente)
         {
             resetPendente = true;
@@ -159,6 +189,20 @@ void taskControle(void *pvParameters)
         ComandosSaida saida = controlador.atualizar(entrada);
 
         atuacao.definirPotencia(saida.potenciaBomba);
+
+        // Ao entrar em falha, volta para a tela principal com a causa.
+        if (saida.estado == EstadoReservatorio::FALHA &&
+            estadoAnterior != EstadoReservatorio::FALHA)
+        {
+            telaAtual = 0;
+            mudouTela = true;
+        }
+
+        bool mudouEstado = (saida.estado != estadoAnterior) ||
+                           (saida.subestado != subestadoAnterior);
+
+        estadoAnterior = saida.estado;
+        subestadoAnterior = saida.subestado;
 
         if (novaLeitura && resetPendente)
         {
@@ -190,8 +234,9 @@ void taskControle(void *pvParameters)
                 controlador.obterSetpoint());
         }
 
-        // Atualiza o display em novas leituras ou mudancas de tela.
-        if (novaLeitura || mudouTela)
+        // Atualiza o display em novas leituras, mudancas de tela
+        // ou mudancas de estado.
+        if (novaLeitura || mudouTela || mudouEstado)
         {
             char linha1[17];
             char linha2[17];
@@ -214,11 +259,30 @@ void taskControle(void *pvParameters)
                         "Nivel: INVALIDO");
                 }
 
-                snprintf(
-                    linha2,
-                    sizeof(linha2),
-                    "Estado: %s",
-                    nomeEstado(saida.estado));
+                if (saida.estado == EstadoReservatorio::FALHA)
+                {
+                    snprintf(
+                        linha2,
+                        sizeof(linha2),
+                        "FALHA: %s",
+                        nomeCausa(saida.causaFalha));
+                }
+                else if (saida.estado == EstadoReservatorio::OPERACAO_NORMAL)
+                {
+                    snprintf(
+                        linha2,
+                        sizeof(linha2),
+                        "%s",
+                        nomeSubestado(saida.subestado));
+                }
+                else
+                {
+                    snprintf(
+                        linha2,
+                        sizeof(linha2),
+                        "Estado: %s",
+                        nomeEstado(saida.estado));
+                }
             }
             else if (telaAtual == 1)
             {

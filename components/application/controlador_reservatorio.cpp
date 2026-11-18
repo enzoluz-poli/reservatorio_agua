@@ -64,8 +64,7 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
         saida.potenciaBomba = 0;
 
         if (entrada.botaoReset &&
-            entrada.novaLeituraUltrassom &&
-            leituraSegura)
+            entrada.novaLeituraUltrassom)
         {
             estadoAtual = EstadoReservatorio::RECUPERACAO;
             contadorLeiturasInvalidas = 0;
@@ -81,7 +80,8 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
         }
 
         saida.estado = EstadoReservatorio::FALHA;
-        saida.nivelPercentual = -1.0f;
+        saida.causaFalha = causaFalha;
+        saida.nivelPercentual = nivel;
         saida.ledVermelho = true;
         saida.buzzer = true;
 
@@ -93,11 +93,7 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
     if (estadoAtual == EstadoReservatorio::RECUPERACAO &&
         entrada.novaLeituraUltrassom)
     {
-        if (!leituraSegura)
-        {
-            estadoAtual = EstadoReservatorio::FALHA;
-        }
-        else if (!fluxoPendenteVerificacao)
+        if (leituraSegura && !fluxoPendenteVerificacao)
         {
             estadoAtual = EstadoReservatorio::AGUARDANDO;
         }
@@ -175,6 +171,26 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
 
     saida.estado = estadoAtual;
 
+    // Subestado visivel da operacao normal (nao altera o controle da bomba)
+    if (estadoAtual == EstadoReservatorio::OPERACAO_NORMAL && leituraSegura)
+    {
+        float limiteAbaixo =
+            std::min(0.9f * setpoint, setpoint - tolerancia);
+
+        if (nivel < limiteAbaixo)
+        {
+            saida.subestado = SubestadoOperacao::ABAIXO_SETPOINT;
+        }
+        else if (nivel < setpoint - tolerancia)
+        {
+            saida.subestado = SubestadoOperacao::PROXIMO_SETPOINT;
+        }
+        else
+        {
+            saida.subestado = SubestadoOperacao::ESTABILIZADO;
+        }
+    }
+
     // Indicadores conforme o estado.
     switch (estadoAtual)
     {
@@ -244,11 +260,13 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
         {
             estadoAtual = EstadoReservatorio::FALHA;
             fluxoPendenteVerificacao = true;
+            causaFalha = CausaFalha::SEM_FLUXO;
             bombaLigada = false;
             potenciaBombaAtual = 0;
 
             saida.potenciaBomba = 0;
             saida.estado = EstadoReservatorio::FALHA;
+            saida.causaFalha = CausaFalha::SEM_FLUXO;
             saida.nivelPercentual = nivel;
             saida.ledVerde = false;
             saida.ledAzul = false;
@@ -291,13 +309,18 @@ ComandosSaida ControladorReservatorio::atualizar(const DadosEntrada &entrada)
         if (contadorLeiturasInvalidas >= 3)
         {
             estadoAtual = EstadoReservatorio::FALHA;
+            causaFalha = CausaFalha::SENSOR_NIVEL;
         }
 
         saida.nivelPercentual = -1.0f;
         saida.estado = estadoAtual;
+        saida.causaFalha =
+            (estadoAtual == EstadoReservatorio::FALHA)
+                ? causaFalha
+                : CausaFalha::NENHUMA;
 
         saida.ledVerde = false;
-        saida.ledAzul = false;
+        saida.ledAzul = (estadoAtual == EstadoReservatorio::RECUPERACAO);
         saida.ledVermelho =
             (estadoAtual == EstadoReservatorio::FALHA);
         saida.buzzer =
