@@ -65,11 +65,25 @@ static const char *nomeCausa(CausaFalha causa)
 {
     switch (causa)
     {
+    case CausaFalha::NENHUMA:
+        return "NENHUMA";
+
     case CausaFalha::SENSOR_NIVEL:
-        return "SENSOR";
+        return "SENSOR NIVEL";
 
     case CausaFalha::SEM_FLUXO:
         return "SEM FLUXO";
+
+    case CausaFalha::FLUXO_INSUFICIENTE:
+        return "FLUXO INSUF.";
+
+    case CausaFalha::FLUXO_EXCESSIVO:
+        return "FLUXO EXCESS.";
+
+    case CausaFalha::FLUXO_SEM_ENCHIMENTO:
+        return "SEM ENCHIMENTO";
+    case CausaFalha::FALHA_SENSOR_FLUXO:
+        return "SENSOR FLUXO";
 
     default:
         return "DESCONHECIDA";
