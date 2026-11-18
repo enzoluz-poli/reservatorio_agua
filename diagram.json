@@ -74,21 +74,19 @@
       }
     },
     {
-      "type": "wokwi-hc-sr04",
-      "id": "ultrassom",
-      "top": 150,
-      "left": 250,
-      "attrs": {
-        "distance": "20"
-      }
-    },
+  "type": "chip-ultrassom",
+  "id": "ultrassom",
+  "top": 150,
+  "left": 250,
+  "attrs": {}
+},
     {
       "type": "chip-pulse",
       "id": "fluxo",
       "top": 400,
       "left": 450,
       "attrs": {
-        "frequency": "7.5"
+        "frequency": "18.75"
       }
     },
     {
@@ -277,21 +275,14 @@
       ]
     ],
     [
-      "esp:18",
-      "ultrassom:ECHO",
-      "blue",
-      [
-        "v0"
-      ]
-    ],
-    [
-      "esp:5V",
-      "ultrassom:VCC",
-      "red",
-      [
-        "v0"
-      ]
-    ],
+  "esp:18",
+  "ultrassom:ECHO",
+  "blue",
+  [
+    "v0"
+  ]
+],
+  
     [
       "esp:GND.1",
       "ultrassom:GND",
@@ -300,6 +291,19 @@
         "v0"
       ]
     ],
+    [
+  "esp:4",
+  "ultrassom:PUMP",
+  "orange",
+  []
+],
+[
+  "esp:5V",
+  "ultrassom:VCC",
+  "red",
+  ["v0"]
+],
+
     [
       "esp:32",
       "btnLiga:1.l",
@@ -385,17 +389,12 @@
       []
     ],
     [
-      "fluxo:PULSE",
-      "esp:34",
-      "purple",
-      []
-    ],
-    [
       "esp:4",
       "fluxo:PUMP",
       "orange",
       []
     ],
+    
     [
       "esp:GND.1",
       "lcd1:GND",
@@ -443,6 +442,12 @@
       "esp:GND.1",
       "black",
       []
-    ]
+    ],
+    [
+  "fluxo:PULSE",
+  "esp:34",
+  "purple",
+  []
+]
   ]
 }
