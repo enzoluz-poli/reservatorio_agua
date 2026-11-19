@@ -1,0 +1,9 @@
+{
+  "name": "Ultrasonic Sensor Simulator",
+  "author": "Reservatorio",
+  "pins": [
+    "TRIG",
+    "ECHO",
+    "PUMP"
+  ]
+}

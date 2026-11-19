@@ -1,120 +1,294 @@
 # Reservatório Inteligente de Água
 
-Projeto de PMR0120 (Introdução a Sistemas Embarcados), Escola Politécnica da USP.
-Sistema embarcado em ESP32 que mantém o nível de uma caixa d'água em um
-setpoint ajustável, com detecção de falhas. Executa em FreeRTOS (ESP-IDF,
-C++) e é simulado no Wokwi.
+Projeto de PMR0120 (Introdução a Sistemas Embarcados), Escola Politécnica da Universidade de São Paulo (USP).
 
-## Funcionamento
+Sistema embarcado baseado em ESP32 para monitoramento e controle automático do nível de um reservatório de água. O projeto utiliza controle PI, monitoramento de vazão, detecção de falhas e uma máquina de estados para gerenciar a operação e a recuperação do sistema.
 
-- O nível é medido por um sensor ultrassônico HC-SR04 e convertido em
-  porcentagem (distância de 40 cm = 0%, 5 cm = 100%, com margem de 2 cm).
-- A bomba é comandada por PWM (0 a 100%) com controle proporcional (ganho 5)
-  e zona morta: liga quando o nível fica abaixo de (setpoint - 2%) e desliga
-  ao alcançá-lo.
-- Um sensor de vazão YF-S201 confirma que há fluxo quando a bomba está ligada.
-- O LCD 16x2 (I2C) tem 3 telas (botão MENU): nível e estado, bomba e
-  ajuste do setpoint.
-- Os botões LIGAR, DESLIGAR, RESET, MENU, + e - controlam o sistema.
+Desenvolvido em C++ com ESP-IDF e FreeRTOS, com simulação no Wokwi.
 
-## Estados
+## 1. Funcionamento
 
-| Estado          | Descrição                                          | Indicação             |
-|-----------------|----------------------------------------------------|-----------------------|
-| INICIALIZANDO   | Configuração dos periféricos                       | LED azul              |
-| AGUARDANDO      | Pronto, bomba desligada, espera o LIGAR            | LED azul              |
-| OPERACAO_NORMAL | Controla o nível em torno do setpoint              | LED verde             |
-| FALHA           | Leitura inválida ou ausência de fluxo              | LED vermelho + buzzer |
-| RECUPERACAO     | Após RESET; ver abaixo                             | LED azul              |
+O sistema monitora o nível de água por meio de um sensor ultrassônico HC-SR04 e controla uma bomba utilizando PWM.
 
-Subestados da operação normal (mostrados no LCD):
-- Abaixo do setpoint: nível abaixo de 90% do setpoint (ou de setpoint - 2%,
-  o que for menor); a bomba trabalha com potência alta.
-- Próximo do setpoint: entre esse limite e (setpoint - 2%); a potência
-  diminui conforme o erro diminui.
-- Estabilizado: a partir de (setpoint - 2%); bomba desligada.
+A distância medida pelo sensor é convertida em porcentagem de nível:
+- 40 cm corresponde a 0%.
+- 5 cm corresponde a 100%.
+- Uma margem de 2 cm é utilizada na validação das leituras.
 
-Condições de falha (o LCD mostra a causa):
-- FALHA: SENSOR: 3 leituras consecutivas inválidas do ultrassom (fora da faixa).
-- FALHA: SEM FLUXO: bomba ligada há mais de 2 s e 3 leituras consecutivas de
-  vazão abaixo de 0,3 L/min.
+O controle utiliza um controlador PI (Proporcional-Integral), com os seguintes parâmetros:
+- Setpoint inicial: 70%.
+- Tolerância: 2 pontos percentuais.
+- Ganho proporcional (Kp): 5,0.
+- Ganho integral (Ki): 0,15.
+- Potência da bomba: 0 a 100%.
 
-Recuperação (botão RESET em FALHA):
-- O sistema entra em RECUPERACAO e a bomba permanece desligada, exceto no
-  teste de vazão descrito abaixo.
-- Falha de sensor: se o nível voltar a ser lido corretamente, vai a AGUARDANDO.
-  Se 3 leituras consecutivas continuarem inválidas, retorna a FALHA.
-- Falha de vazão: a bomba é ligada a 50% como teste e o sistema só volta a
-  AGUARDANDO se o fluxo for confirmado em 2 leituras. Se o problema
-  persistir, retorna a FALHA e o LIGAR continua bloqueado.
+Quando o nível está abaixo da faixa de tolerância, a potência da bomba é calculada em função do erro entre o nível medido e o setpoint. Ao alcançar a faixa de tolerância, a bomba é desligada.
 
-## Arquitetura
+O controlador também utiliza saturação da potência e proteção anti-windup para evitar o acúmulo excessivo do erro integral.
 
-O código está dividido em 3 componentes do ESP-IDF, em `components/`:
+Um sensor de vazão YF-S201 monitora o fluxo enquanto a bomba está ligada. A vazão medida é comparada com a vazão esperada para a potência aplicada.
 
-- `hal_reservatorio/`: drivers de hardware (DriverUltrassom, DriverFluxo,
-  DriverAtuacao, DriverIndicador, DriverBotoes, DriverDisplay).
-- `application/`: ControladorReservatorio, a máquina de estados, o controle
-  da bomba e a detecção de falhas. Não acessa o hardware diretamente: recebe
-  `DadosEntrada` e devolve `ComandosSaida`.
-- `tasks/`: tarefas FreeRTOS.
+## 2. Interface com o usuário
 
-Tarefas:
-- TaskSensores: lê o ultrassom e o sensor de vazão a cada 1 s e envia os
-  dados (inclusive o intervalo real entre leituras) à TaskControle por uma
-  fila de 5 posições.
-- TaskControle: recebe a fila, lê os botões, executa o controlador e comanda
-  a bomba, os LEDs, o buzzer e o display.
+O sistema possui um LCD 16x2 com interface I2C e seis botões físicos.
 
-## Pinos (ESP32)
+### Telas do LCD
 
-| Função                                  | GPIO              |
-|-----------------------------------------|-------------------|
-| HC-SR04 TRIG / ECHO                     | 5 / 18            |
-| Sensor de vazão (pulsos)                | 34                |
-| Bomba (PWM)                             | 23                |
-| Sinal "bomba ligada" (gerador de pulsos)| 4                 |
-| LED verde / vermelho / azul             | 26 / 27 / 19      |
-| Buzzer                                  | 25                |
-| LCD I2C SDA / SCL (endereço 0x27)       | 21 / 22           |
-| Botões LIGAR / DESLIGAR / RESET / MENU  | 32 / 33 / 16 / 17 |
-| Botões + / -                            | 13 / 14           |
+1. **Nível e estado:** apresenta o nível percentual e o estado atual. Durante a operação, também apresenta o subestado; em caso de falha, mostra sua causa.
+2. **Bomba:** informa se a bomba está ligada ou desligada e apresenta a potência aplicada.
+3. **Ajuste do setpoint:** apresenta o valor atual do setpoint.
 
-## Como executar
+O botão MENU alterna entre as três telas.
 
-Requisitos: VSCode com as extensões PlatformIO e Wokwi (framework ESP-IDF).
+### Botões
 
-    pio run                                   # compila
-    Ctrl+Shift+P > Wokwi: Start Simulator     # simula
+| Botão | Função |
+|---|---|
+| LIGAR | Inicia a operação automática |
+| DESLIGAR | Interrompe a operação |
+| RESET | Inicia a recuperação após uma falha |
+| MENU | Alterna as telas do LCD |
+| + | Aumenta o setpoint em 5 pontos percentuais |
+| - | Diminui o setpoint em 5 pontos percentuais |
 
-No simulador, o nível é alterado pelo controle deslizante do HC-SR04. A vazão
-é gerada por um chip customizado do Wokwi (`chips/`), que só emite pulsos
-quando a bomba está ligada; para simular falha, ajuste sua frequência a 0 e
-reinicie a simulação. O LED amarelo no GPIO 23 representa a potência da bomba.
+O setpoint pode variar de 10% a 95%, com valor inicial de 70%. Valores fora desses limites são rejeitados pelo controlador.
 
-## Uso
+## 3. Máquina de estados
 
-1. LIGAR: inicia a operação (LED verde).
-2. MENU: alterna as telas do LCD.
-3. + e -: alteram o setpoint de 5 em 5 (limites de 10% a 95%).
-4. DESLIGAR: volta para AGUARDANDO.
-5. RESET: inicia a recuperação a partir de FALHA.
+O funcionamento do sistema é organizado em cinco estados:
 
-## Estrutura do repositório
+| Estado | Descrição | Indicação |
+|---|---|---|
+| INICIALIZANDO | Configuração inicial dos periféricos | LED azul |
+| AGUARDANDO | Sistema pronto, aguardando comando de operação | LED azul |
+| OPERACAO_NORMAL | Controle automático do nível do reservatório | LED verde |
+| FALHA | Falha detectada; bomba desligada | LED vermelho e buzzer |
+| RECUPERACAO | Verificação das condições para retorno à operação | LED azul |
 
-    src/main.cpp      cria a fila e as tarefas
-    components/       camadas hal_reservatorio, application e tasks
-    chips/            chip de pulsos do Wokwi (sensor de vazão)
-    diagram.json      circuito do Wokwi
-    wokwi.toml        configuração da simulação
+### Subestados da operação normal
 
-Branches: `main` (versão final), `develop` (integração) e `feature/*`.
+- **ABAIXO_SETPOINT:** nível abaixo de 10 pontos percentuais do setpoint.
+- **PROXIMO_SETPOINT:** nível entre o limite anterior e a faixa de tolerância.
+- **ESTABILIZADO:** nível dentro da tolerância de 2 pontos percentuais, com a bomba desligada.
 
-## Limitações
+## 4. Diagnóstico de falhas
 
-- O controle é proporcional com zona morta, sem ação integral ou derivativa.
-- No simulador o nível é definido manualmente, então a bomba não altera o
-  nível medido.
-- Em hardware real, o ECHO do HC-SR04 (5 V) exige divisor de tensão para o
-  ESP32
+O controlador monitora o funcionamento da bomba e compara a vazão medida com a vazão esperada.
 
+A verificação da vazão começa após 2 segundos de funcionamento da bomba.
+
+Para o modelo utilizado na simulação, considera-se que 100% de PWM corresponde a uma vazão de 5,0 L/min. A faixa aceitável utiliza uma tolerância de ±50% em relação à vazão esperada.
+
+O sistema identifica as seguintes condições:
+
+| Causa | Descrição |
+|---|---|
+| SENSOR_NIVEL | Três leituras consecutivas inválidas do sensor ultrassônico |
+| SEM_FLUXO | Vazão inferior a 0,3 L/min |
+| FLUXO_INSUFICIENTE | Vazão abaixo da faixa esperada para a potência aplicada |
+| FLUXO_EXCESSIVO | Vazão acima da faixa esperada para a potência aplicada |
+| FLUXO_SEM_ENCHIMENTO | Vazão normal, mas sem aumento significativo do nível |
+| FALHA_SENSOR_FLUXO | Ausência de pulsos de vazão enquanto o nível continua aumentando |
+
+As falhas relacionadas à vazão são confirmadas após três leituras consecutivas anormais. A condição de vazão normal sem aumento significativo do nível também é monitorada e pode provocar falha após três leituras consecutivas sem enchimento.
+
+Quando uma falha é confirmada:
+- A bomba é desligada.
+- O LED vermelho é acionado.
+- O buzzer é ativado.
+- A operação normal fica bloqueada até a recuperação.
+
+## 5. Recuperação
+
+O estado RECUPERACAO é iniciado pelo botão RESET quando o sistema está em FALHA.
+
+O procedimento depende da causa identificada.
+
+### Falha do sensor de nível
+
+O sistema verifica novamente as leituras do sensor ultrassônico. Quando uma leitura válida é recebida, retorna a AGUARDANDO. Caso três leituras consecutivas continuem inválidas, retorna a FALHA.
+
+### Falha relacionada à vazão
+
+Quando existe uma verificação de vazão pendente, a bomba é acionada com potência fixa de 50% para testar o funcionamento.
+
+O sistema retorna a AGUARDANDO após duas leituras consecutivas de vazão dentro da faixa esperada. Caso a condição anormal persista, retorna a FALHA e desliga a bomba.
+
+## 6. Arquitetura de software
+
+O projeto utiliza uma arquitetura dividida em três componentes do ESP-IDF, localizados em `components/`.
+
+### HAL — Hardware Abstraction Layer
+
+Localizada em `components/hal_reservatorio/`, contém os drivers responsáveis pela comunicação com os periféricos:
+
+- `driver_ultrassom.cpp`
+- `driver_fluxo.cpp`
+- `driver_atuacao.cpp`
+- `driver_indicador.cpp`
+- `driver_botoes.cpp`
+- `driver_display.cpp`
+
+### Application
+
+Localizada em `components/application/`, contém o `ControladorReservatorio`, responsável pela lógica principal do sistema:
+
+- Máquina de estados.
+- Controle PI da bomba.
+- Cálculo do nível percentual.
+- Monitoramento da vazão.
+- Diagnóstico de falhas.
+- Gerenciamento da recuperação.
+
+A camada de aplicação não acessa diretamente os periféricos. Ela recebe os dados por meio da estrutura `DadosEntrada` e retorna os comandos por meio de `ComandosSaida`.
+
+### Tasks
+
+Localizada em `components/tasks/`, contém as tarefas responsáveis pela execução concorrente do sistema.
+
+**TaskSensores**
+- Realiza a aquisição dos dados dos sensores a cada 1 segundo.
+- Calcula e registra o intervalo real entre leituras.
+- Envia os dados à TaskControle por meio de uma fila FreeRTOS de cinco posições.
+
+**TaskControle**
+- Recebe os dados dos sensores.
+- Processa os comandos dos botões.
+- Executa o controlador.
+- Atualiza a bomba, os LEDs, o buzzer e o display.
+
+A comunicação entre as tarefas é realizada por uma fila, evitando o compartilhamento direto dos dados de aquisição.
+
+## 7. Pinagem do ESP32
+
+| Função | GPIO |
+|---|---|
+| HC-SR04 TRIG | 5 |
+| HC-SR04 ECHO | 18 |
+| Sensor de vazão (pulsos) | 34 |
+| Saída PWM da bomba | 23 |
+| Sinal de bomba ligada para os chips simulados | 4 |
+| LED verde | 26 |
+| LED vermelho | 27 |
+| LED azul | 19 |
+| Buzzer | 25 |
+| LCD SDA | 21 |
+| LCD SCL | 22 |
+| Botão LIGAR | 32 |
+| Botão DESLIGAR | 33 |
+| Botão RESET | 16 |
+| Botão MENU | 17 |
+| Botão + | 13 |
+| Botão - | 14 |
+
+## 8. Como executar
+
+### Requisitos
+
+- Visual Studio Code.
+- PlatformIO.
+- Extensão Wokwi.
+- ESP-IDF.
+
+### Compilação
+
+Na raiz do projeto, execute:
+
+```bash
+pio run
+```
+
+### Simulação
+
+No VS Code, abra a paleta de comandos:
+
+`Ctrl + Shift + P` → `Wokwi: Start Simulator`
+
+### Chips personalizados
+
+A simulação utiliza dois chips personalizados localizados em `chips/`.
+
+**ultrassom.chip.c**
+- Simula o sensor ultrassônico.
+- Representa o aumento do nível do reservatório quando a bomba está ligada.
+- A distância medida diminui durante o funcionamento da bomba.
+
+**pulse.chip.c**
+- Simula o sensor de vazão.
+- Gera pulsos quando recebe o sinal de bomba ligada.
+- Permite alterar a frequência para representar diferentes condições de vazão.
+
+Para simular ausência de vazão, configure a frequência do chip `pulse` para 0 Hz.
+
+Na simulação, um LED amarelo conectado ao GPIO 23 representa visualmente a potência PWM aplicada à bomba.
+
+## 9. Testes funcionais
+
+Os seguintes cenários foram executados e validados no Wokwi:
+
+| Teste | Resultado observado |
+|---|---|
+| Inicialização do sistema | Aprovado |
+| Aquisição e leitura dos sensores | Aprovado |
+| Acionamento da bomba | Aprovado |
+| Aumento simulado do nível durante o bombeamento | Aprovado |
+| Desligamento automático ao alcançar a faixa do setpoint | Aprovado |
+| Desligamento manual | Aprovado |
+| Detecção de ausência de vazão | Aprovado |
+| Desligamento automático após detecção de falha | Aprovado |
+| Recuperação após restabelecimento da vazão | Aprovado |
+
+Os testes de recuperação foram realizados após o acionamento do RESET físico do ESP32 no simulador. Isso não significa que todos os tipos de falha e todas as condições de recuperação tenham sido testados individualmente.
+
+## 10. Estrutura do repositório
+
+```text
+reservatorio_agua/
+│
+├── src/
+│   └── main.cpp
+│
+├── components/
+│   ├── application/
+│   │   ├── controlador_reservatorio.cpp
+│   │   └── include/
+│   │       └── controlador_reservatorio.h
+│   │
+│   ├── hal_reservatorio/
+│   │   ├── driver_atuacao.cpp
+│   │   ├── driver_botoes.cpp
+│   │   ├── driver_display.cpp
+│   │   ├── driver_fluxo.cpp
+│   │   ├── driver_indicador.cpp
+│   │   ├── driver_ultrassom.cpp
+│   │   └── include/
+│   │
+│   └── tasks/
+│       ├── task_controle.cpp
+│       ├── task_sensores.cpp
+│       └── include/
+│
+├── chips/
+│   ├── pulse.chip.c
+│   ├── pulse.chip.json
+│   ├── pulse.chip.wasm
+│   ├── ultrassom.chip.c
+│   ├── ultrassom.chip.json
+│   ├── ultrassom.chip.wasm
+│   └── wokwi-api.h
+│
+├── diagram.json
+└── wokwi.toml
+```
+
+## 11. Limitações
+
+- O controlador utiliza ação proporcional e integral, sem ação derivativa.
+- O modelo da bomba e do sensor de vazão utilizado na simulação é simplificado.
+- A simulação não substitui testes com sensores, bomba e reservatório físicos.
+- O modelo de vazão deve ser calibrado com os componentes reais antes da utilização em hardware.
+- O pino ECHO do HC-SR04 opera em 5 V e exige divisor de tensão para compatibilidade com o ESP32.
+
+---
+
+**Projeto desenvolvido para a disciplina PMR0120 — Introdução a Sistemas Embarcados, Escola Politécnica da Universidade de São Paulo.**
